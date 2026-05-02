@@ -1,171 +1,253 @@
-# PR Reviewer Agent — Spec de implementación
+# Sniff — PR Reviewer con Personalidad
 
-> Proyecto para hackathon de v0/Vercel. Tiempo objetivo: 3 horas. Build y deploy en Vercel.
+> Hackathon v0/Vercel. Tiempo: 3 horas. Todo en el ecosistema Vercel.
 
-## Objetivo
+## Idea
 
-Construir una web app donde un usuario pegue la URL de un Pull Request público de GitHub, seleccione una personalidad de revisor, y reciba un code review streaming generado por un agente de AI con tool use real (no un wrapper).
+Web app donde pegas la URL de un PR publico de GitHub, eliges una personalidad de reviewer (strict, mentor, troll), y recibes un code review en streaming generado por AI con tool use real — el agente decide cuando necesita leer mas contexto del repo.
 
-## Stack
+**Diferenciador:** No es un wrapper de prompt. El agente tiene tools y decide autonomamente que archivos explorar para dar un review mas profundo. El usuario ve en tiempo real cuando el agente esta "investigando".
 
-- **Framework:** Next.js 15 (App Router, TypeScript)
-- **UI:** Tailwind + shadcn/ui (generar base con v0)
-- **AI SDK:** `ai` package de Vercel (`streamText` con `tools`)
-- **Modelo:** `claude-sonnet-4-5` vía `@ai-sdk/anthropic` (preferido) o `gpt-4o` como fallback
-- **Cache:** Vercel KV (Redis) para resultados por URL de PR
-- **Deploy:** Vercel, runtime Node.js (no Edge — el AI SDK con tools es más estable en Node)
-- **GitHub API:** REST sin auth para repos públicos (Octokit opcional, fetch directo es suficiente)
+---
 
-## Arquitectura
+## Stack (todo Vercel)
+
+| Capa | Tecnologia | Nota |
+|------|-----------|------|
+| Framework | Next.js 15 (App Router, TS) | Bootstrap con `create-next-app` |
+| UI | shadcn/ui + Tailwind | Generar componentes base con **v0** |
+| AI | `ai` SDK de Vercel + `@ai-sdk/openai` | Usar modelo via Vercel AI Gateway |
+| Modelo | `gpt-4o-mini` via Vercel AI Gateway | Incluido en los creditos de Vercel ($20 da para ~miles de requests) |
+| Deploy | Vercel | Runtime Node.js (no Edge) |
+| GitHub API | `fetch` directo, sin libreria | REST API publica, sin auth |
+
+### Sobre los creditos de Vercel y el modelo
+
+Los $20 de creditos de Vercel se pueden usar con el **AI Gateway** de Vercel. Esto te da acceso a modelos sin necesitar API keys externas:
+
+```ts
+import { openai } from '@ai-sdk/openai';
+
+// Vercel AI Gateway — usa tus creditos de Vercel directamente
+const model = openai('gpt-4o-mini'); // ~$0.15/1M input tokens — tus $20 rinden mucho
+```
+
+**Configuracion en Vercel Dashboard:**
+1. Ve a tu proyecto en Vercel → Settings → AI
+2. Habilita el AI Gateway
+3. No necesitas `OPENAI_API_KEY` — Vercel lo maneja con tus creditos
+
+**Alternativa si quieres Claude:** Necesitarias una `ANTHROPIC_API_KEY` por separado (no esta cubierta por los creditos de Vercel). Para la hackathon, `gpt-4o-mini` es suficiente y mucho mas barato.
+
+> **Decision:** Usar `gpt-4o-mini` via Vercel AI Gateway. Costo estimado para el demo: <$0.50.
+
+---
+
+## Arquitectura (minima)
 
 ```
 app/
-├── page.tsx                    # Landing con input + selector de personalidad
+├── page.tsx                    # Landing: input + selector + stream de resultado
 ├── api/
 │   └── review/
-│       └── route.ts            # POST endpoint que streamea el review
+│       └── route.ts            # POST — streamea el review
 ├── lib/
-│   ├── github.ts               # Helpers: parseUrl, fetchPR, fetchDiff, fetchFile
-│   ├── personas.ts             # System prompts por personalidad
-│   ├── tools.ts                # Tools del agente (fetch_file_context, etc.)
-│   └── kv.ts                   # Wrapper de Vercel KV con TTL
+│   ├── github.ts               # parseUrl(), fetchPR(), fetchDiff(), fetchFileContent()
+│   ├── personas.ts             # 3 system prompts
+│   └── tools.ts                # 1-2 tools del agente
 └── components/
-    ├── ReviewForm.tsx          # Input + selector
-    └── ReviewStream.tsx        # Renderiza el stream con markdown
+    ├── review-form.tsx         # Input URL + selector personalidad
+    ├── review-stream.tsx       # Renderiza markdown en streaming
+    └── tool-indicator.tsx      # Muestra cuando el agente usa una tool
 ```
 
-## Endpoint principal
+**Solo 7 archivos de codigo.** Sin cache, sin base de datos, sin auth. Puro frontend + 1 API route + AI.
+
+---
+
+## Flujo del endpoint
 
 `POST /api/review`
 
-**Body:** `{ prUrl: string, persona: 'strict' | 'mentor' | 'troll' }`
+```json
+{ "prUrl": "https://github.com/owner/repo/pull/123", "persona": "strict" }
+```
 
-**Lógica:**
+1. Parsear URL → `{ owner, repo, prNumber }`. Si invalida, 400.
+2. Fetch GitHub REST (sin auth, limite 60 req/h — suficiente para demo):
+   - `GET /repos/{owner}/{repo}/pulls/{prNumber}` → titulo, descripcion, autor
+   - `GET /repos/{owner}/{repo}/pulls/{prNumber}/files` → archivos + patches
+3. Tomar los **3 archivos con mas cambios** (para no volar el context window).
+4. `streamText()` con:
+   - `model: openai('gpt-4o-mini')`
+   - `system`: prompt de la persona
+   - `messages`: metadata del PR + diffs
+   - `tools`: definidas abajo
+   - `maxSteps: 3`
+5. Devolver `toDataStreamResponse()`.
 
-1. Parse `prUrl` → extraer `{ owner, repo, prNumber }`. Validar formato.
-2. Check Vercel KV con key `review:{owner}/{repo}/{prNumber}:{persona}`. Si existe, stream desde cache.
-3. Fetch del PR vía GitHub REST:
-   - `GET /repos/{owner}/{repo}/pulls/{pr_number}` → metadata
-   - `GET /repos/{owner}/{repo}/pulls/{pr_number}/files` → archivos modificados con `patch`
-4. Truncar a los 5 archivos con más cambios (`additions + deletions` desc).
-5. Llamar `streamText` con:
-   - `model: anthropic('claude-sonnet-4-5')`
-   - `system`: prompt de la persona elegida
-   - `messages`: incluir metadata del PR + diffs truncados
-   - `tools`: las 3 tools de abajo
-   - `maxSteps: 5` (permitir varias iteraciones de tool calls)
-6. Stream con `toDataStreamResponse()` al cliente.
-7. Al terminar (callback `onFinish`), guardar texto final en KV con TTL 24h.
+---
 
-## Tools del agente
+## Tools del agente (solo 2)
 
-Definir con el helper `tool()` del AI SDK. Estas tools son lo que diferencia esto de un prompt simple — el modelo decide cuándo llamarlas.
+Menos tools = menos complejidad = mas estable en 3 horas.
 
 ### `fetch_file_context`
-- **Input:** `{ path: string }`
-- **Output:** Contenido completo del archivo en la rama del PR.
-- **Uso esperado:** Cuando el agente necesita ver más allá de las líneas del diff (ej: entender la función completa que está modificando).
-- **Implementación:** `GET /repos/{owner}/{repo}/contents/{path}?ref={pr_head_sha}`
 
-### `fetch_related_files`
-- **Input:** `{ path: string }`
-- **Output:** Array de paths candidatos: tests del archivo (`.test.ts`, `__tests__/`), archivos en el mismo directorio.
-- **Uso esperado:** El agente quiere verificar si hay tests o cómo se usa el código.
-- **Implementación:** Heurística simple — listar el directorio padre y buscar archivos con nombres relacionados.
+```ts
+tool({
+  description: 'Fetch the full content of a file from the PR branch to understand context beyond the diff',
+  parameters: z.object({
+    path: z.string().describe('File path in the repo'),
+  }),
+  execute: async ({ path }) => {
+    // GET /repos/{owner}/{repo}/contents/{path}?ref={head_sha}
+    // Devolver contenido decodificado de base64, truncado a 200 lineas
+  },
+})
+```
 
-### `search_repo`
-- **Input:** `{ query: string }`
-- **Output:** Top 5 resultados de GitHub code search en el repo.
-- **Uso esperado:** Verificar convenciones existentes ("¿este repo ya usa este patrón?").
-- **Implementación:** `GET /search/code?q={query}+repo:{owner}/{repo}`
+**Cuando lo usa el agente:** Cuando el diff muestra solo unas lineas y necesita ver la funcion completa o los imports.
 
-> Nota: GitHub code search sin auth es limitado. Si tira 403, fallar silenciosamente y devolver array vacío — no romper el flujo.
+### `list_directory`
+
+```ts
+tool({
+  description: 'List files in a directory to find related files like tests or configs',
+  parameters: z.object({
+    path: z.string().describe('Directory path in the repo'),
+  }),
+  execute: async ({ path }) => {
+    // GET /repos/{owner}/{repo}/contents/{path}?ref={head_sha}
+    // Devolver array de nombres de archivo
+  },
+})
+```
+
+**Cuando lo usa el agente:** Para buscar si hay tests del archivo que esta revisando.
+
+> Se elimino `search_repo` — la API de code search necesita auth y es inestable. No vale la complejidad para 3 horas.
+
+---
 
 ## Personalidades
 
-Tres system prompts en `lib/personas.ts`. Estructura común:
+Archivo `lib/personas.ts` con 3 exports. Estructura comun:
 
 ```
-Eres un code reviewer experto. Recibirás:
-1. Metadata del PR (título, descripción, autor)
-2. Diffs de los archivos modificados
-3. Acceso a tools para fetchear más contexto
+Eres un code reviewer experto. Vas a recibir:
+1. Metadata del PR (titulo, descripcion, autor)
+2. Diffs de archivos modificados
+3. Tools para explorar mas contexto del repo — USALAS cuando necesites entender algo mejor
 
-Tu output debe estructurarse en markdown con estas secciones:
-## Resumen
-## Problemas encontrados (con líneas específicas)
-## Sugerencias
-## Veredicto final: [approve | request changes | needs discussion]
+Estructura tu review asi:
+## Resumen (2-3 oraciones)
+## Problemas (con paths y lineas especificas)
+## Lo bueno (reconoce lo que esta bien)
+## Veredicto: approve | request_changes | needs_discussion
 
-Personalidad: {personality_specific_block}
+{bloque_personalidad}
 ```
 
-**Bloques específicos:**
+| Persona | Bloque |
+|---------|--------|
+| `strict` | Senior con 15 anos. Directo, sin rodeos. Cita principios (SOLID, DRY) solo si aplican. No tolera PR sin tests. |
+| `mentor` | Senior amable. Explica el "por que" de cada sugerencia. Valida lo bueno primero. Sugiere recursos. |
+| `troll` | Sarcastico pero tecnico. Hace bromas sobre patrones malos. Estilo "senior que te caeria bien en un bar". |
 
-- **strict:** Senior con 15 años de experiencia. Directo, sin endulzar. Pregunta por trade-offs. Cita principios concretos (SOLID, DRY, etc.) solo si aplican. No tolera código sin tests.
-- **mentor:** Senior amable enfocado en enseñar. Explica el "por qué" de cada sugerencia. Valida lo bueno antes de criticar. Sugiere recursos para profundizar.
-- **troll:** Sarcástico pero técnicamente correcto. Hace bromas sobre patrones malos sin ser ofensivo personal. Estilo "Linus en sus mejores días, sin los insultos".
+---
 
 ## Frontend
 
-### Página principal (`app/page.tsx`)
+### Generar con v0
 
-- Hero con input grande para URL del PR.
-- Selector de personalidad (3 cards con descripción corta).
-- Botón "Review this PR".
-- Al submit, llamar al endpoint con `useChat` o `useCompletion` del AI SDK (`@ai-sdk/react`) y mostrar el stream debajo.
+Prompt sugerido para v0:
 
-### Render del stream
+> "A single-page app with a centered form: a large URL input for GitHub PR links, 3 selectable personality cards (Strict Senior, Friendly Mentor, Code Troll) with icons and short descriptions, a Review button, and below it a streaming markdown output area with a subtle indicator showing when the AI agent is fetching additional files. Dark theme, modern, minimal. Use shadcn/ui components."
 
-- Markdown renderer (react-markdown + remark-gfm).
-- Code blocks con syntax highlighting (shiki o prism).
-- Indicador visual cuando el agente está usando una tool ("🔧 Fetching context for `src/foo.ts`...").
+Esto te genera el 80% del frontend. Solo conectas la logica.
 
-## Manejo de errores
+### Conexion al backend
 
-- URL inválida → 400 con mensaje claro.
-- PR privado / repo no encontrado → 404, sugerir que sea público.
-- Rate limit de GitHub (403 con `X-RateLimit-Remaining: 0`) → mostrar mensaje + tiempo de reset.
-- Timeout del modelo → reintentar 1 vez, luego fallar con mensaje.
+```tsx
+'use client';
+import { useCompletion } from '@ai-sdk/react';
+
+const { completion, isLoading, complete } = useCompletion({
+  api: '/api/review',
+});
+
+// En el submit:
+await complete('', {
+  body: { prUrl, persona },
+});
+```
+
+### Indicador de tools
+
+Cuando el stream incluye tool calls, mostrar un pequeno badge:
+
+```
+Investigando src/utils/auth.ts...
+```
+
+Esto es el "wow factor" para el jurado — demuestra que no es un prompt plano.
+
+---
 
 ## Variables de entorno
 
 ```
-ANTHROPIC_API_KEY=
-KV_REST_API_URL=
-KV_REST_API_TOKEN=
-GITHUB_TOKEN=          # opcional, sube rate limit de 60 a 5000/h
+# Solo si NO usas Vercel AI Gateway:
+OPENAI_API_KEY=
+
+# Opcional — sube rate limit de GitHub de 60 a 5000 req/h:
+GITHUB_TOKEN=
 ```
 
-## Plan de las 3 horas
+Si usas Vercel AI Gateway con tus creditos, **no necesitas ninguna API key externa**.
 
-| Tiempo | Tarea |
-|---|---|
-| 0:00–0:30 | Bootstrap Next.js, instalar deps, generar UI base con v0, deploy inicial vacío en Vercel. |
-| 0:30–1:00 | `lib/github.ts` + parsing de URL + fetch de PR y diffs. Probar con un PR real. |
-| 1:00–2:00 | Endpoint `/api/review` con `streamText`, definir tools, conectar al frontend con streaming visible. |
-| 2:00–2:30 | Personas (mínimo 1 pulida, las otras 2 funcionales), cache en KV. |
-| 2:30–3:00 | Pulido visual, manejo de errores básico, deploy final, grabar demo. |
+---
 
-## Decisiones explícitas para mantener el scope
+## Plan de 3 horas
 
-- **NO** auth de GitHub (queda para v2).
-- **NO** histórico ni cuentas de usuario.
-- **NO** comentarios in-line estilo GitHub UI — solo markdown plano.
-- **NO** soporte multi-lenguaje explícito — el modelo maneja lo que entienda.
-- **SÍ** tool use real desde el día 1 (es el diferenciador del demo).
-- **SÍ** streaming visible (impacta el "wow" en el demo).
+| Tiempo | Que hacer | Entregable |
+|--------|-----------|------------|
+| 0:00–0:20 | `create-next-app`, instalar `ai @ai-sdk/openai`, deploy inicial vacio en Vercel | URL de Vercel funcionando |
+| 0:20–0:40 | Generar UI en v0, copiar componentes, ajustar layout | Frontend visual listo |
+| 0:40–1:10 | `lib/github.ts` — parsear URL, fetch PR + diff. Probar con un PR real en consola | Datos de GitHub llegando |
+| 1:10–2:00 | `api/review/route.ts` — streamText + tools + conectar al frontend | **Review funcionando end-to-end** |
+| 2:00–2:20 | 3 personalidades pulidas, probar cada una | Selector funcional |
+| 2:20–2:45 | Errores basicos (URL invalida, PR no encontrado), pulido visual | App robusta |
+| 2:45–3:00 | Deploy final, probar con 2-3 PRs reales, grabar demo | **Listo** |
+
+**Hito critico:** A las 2:00 DEBE funcionar el flujo completo (pegar URL → ver review en streaming). Todo despues es pulido.
+
+---
+
+## Lo que NO hacemos (y por que)
+
+| Eliminado | Razon |
+|-----------|-------|
+| Vercel KV / cache | Agrega setup + codigo + tiempo. Para un demo no necesitas cache. |
+| `search_repo` tool | Necesita auth de GitHub, API inestable. |
+| Auth de usuario | No aporta al demo. |
+| Historico de reviews | Scope creep. |
+| Multiples modelos / fallback | Un modelo, bien configurado, es suficiente. |
+| Syntax highlighting (shiki/prism) | `react-markdown` con CSS basico se ve bien. Agregar si sobra tiempo. |
+
+---
 
 ## Checklist de demo
 
-- [ ] Deploy público en Vercel funcionando.
-- [ ] Pegar URL de un PR conocido (ej: uno de Next.js o React) y obtener review en <30s.
-- [ ] Tool calls visibles en la UI (mostrar al jurado que el agente decide qué leer).
-- [ ] Las 3 personalidades seleccionables, mínimo 1 muy pulida.
-- [ ] README con explicación del proyecto y cómo correrlo local.
+- [ ] Deploy publico en Vercel
+- [ ] Pegar URL de PR conocido → review en streaming en <20s
+- [ ] Tool calls visibles en la UI (el agente "investiga")
+- [ ] 3 personalidades seleccionables y diferenciables
+- [ ] README con que es y como correrlo
 
-## Stretch goals (solo si sobra tiempo)
+## Stretch goals (solo si sobran >15 min)
 
-1. Compartir review como link público (`/review/{hash}`).
-2. "Roast battle": dos personalidades opuestas debaten sobre el mismo PR.
-3. Galería de reviews destacados en home.
+1. Syntax highlighting en code blocks (instalar `rehype-highlight`)
+2. Boton "compartir review" que copia el markdown al clipboard
+3. Rate limit visual de GitHub (mostrar requests restantes)
