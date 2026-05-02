@@ -10,7 +10,7 @@
 |---------|-------|
 | `lib/github.ts` | Andrew |
 | `lib/tools.ts` | Andrew |
-| `app/api/review/route.ts` | Andrew |
+| `app/api/chat/route.ts` | Andrew |
 | `lib/personas.ts` | Julidev |
 | `lib/types.ts` | Julidev |
 | `components/*` | Ambos (fase frontend) |
@@ -32,10 +32,12 @@
 
 **Acordar antes de separarse:**
 ```
-POST /api/review
-Body: { prUrl: string, persona: "strict" | "mentor" | "troll" }
-Response: Data stream (Vercel AI SDK format)
+POST /api/chat
+Body: { messages: Message[], prUrl?: string, persona?: "strict" | "mentor" | "troll" }
+Response: Data stream (Vercel AI SDK useChat format)
 ```
+- `prUrl` y `persona` solo se usan en el primer turno para inyectar contexto del PR en el system prompt
+- Del segundo mensaje en adelante el backend los ignora — el historial ya tiene todo el contexto
 
 ---
 
@@ -43,7 +45,7 @@ Response: Data stream (Vercel AI SDK format)
 
 ### Andrew — GitHub API + Tools + Route
 
-> Archivos: `lib/github.ts`, `lib/tools.ts`, `app/api/review/route.ts`
+> Archivos: `lib/github.ts`, `lib/tools.ts`, `app/api/chat/route.ts`
 
 #### 0:10–0:40 — GitHub lib
 
@@ -71,54 +73,52 @@ Response: Data stream (Vercel AI SDK format)
   - `GET /repos/{owner}/{repo}/contents/{path}?ref={ref}`
   - Devuelve array de nombres de archivo
 
-#### 1:00–1:20 — API route
+#### 1:00–1:20 — API route con chat
 
-- [ ] `app/api/review/route.ts`:
-  - Validar body con zod (`prUrl` string, `persona` enum)
-  - Llamar `parseUrl()` → `fetchPR()` + `fetchDiff()`
-  - Importar persona de `getPersona()` de Julidev
-  - `streamText()` con modelo, system prompt, messages (metadata + diffs), tools, `maxSteps: 3`
+- [ ] `app/api/chat/route.ts`:
+  - Parsear body: `messages`, `prUrl?`, `persona?`
+  - Si `messages.length === 1` y hay `prUrl`: fetch PR + diffs, inyectar contexto en el system prompt
+  - Si es turno de seguimiento: usar el mismo system prompt (el contexto del PR esta en el primer mensaje del historial)
+  - `streamText()` con modelo, system prompt de la persona, `messages`, tools, `maxSteps: 3`
   - Devolver `toDataStreamResponse()`
-- [ ] Probar con curl que el stream funcione
+- [ ] Probar con curl:
+  - Primer turno: `{ messages: [{role:"user", content:"Haz el review"}], prUrl: "...", persona: "strict" }`
+  - Segundo turno: `{ messages: [...historial, {role:"user", content:"Como lo arreglarias?"}] }`
 
 ---
 
-### Julidev — Personas + Tipos + Validaciones
+### Julidev — Personas + Tipos
 
 > Archivos: `lib/personas.ts`, `lib/types.ts`
 
 #### 0:10–0:40 — Tipos compartidos
 
-- [ ] `lib/types.ts` — definir interfaces:
+- [ ] `lib/types.ts` — extraer interfaces una vez que Andrew tenga `github.ts` avanzado:
   ```ts
   type Persona = 'strict' | 'mentor' | 'troll'
-  interface PRData { title, description, author, headSha, baseBranch }
-  interface FileDiff { filename, patch, additions, deletions }
-  interface ReviewRequest { prUrl: string, persona: Persona }
+  interface PRData { title: string, description: string, author: string, headSha: string, baseBranch: string }
+  interface FileDiff { filename: string, patch: string, additions: number, deletions: number }
+  interface ChatRequest { messages: Message[], prUrl?: string, persona?: Persona }
   ```
 - [ ] Schema zod para validar el request body (Andrew lo importa en la route)
 
-#### 0:40–1:20 — Personalidades (lo mas importante)
+> Los tipos se alinean con lo que Andrew esta construyendo — coordinar si algo no encaja.
 
-- [ ] `lib/personas.ts` — estructura comun:
+#### 0:40–1:20 — Personalidades para review Y chat
+
+- [ ] `lib/personas.ts` — system prompt base que funciona para ambos contextos:
   ```
-  Eres un code reviewer experto. Vas a recibir:
-  1. Metadata del PR (titulo, descripcion, autor)
-  2. Diffs de archivos modificados
-  3. Tools para explorar mas contexto — USALAS cuando necesites entender algo
-
-  Estructura tu review:
-  ## Resumen (2-3 oraciones)
-  ## Problemas (paths y lineas especificas)
-  ## Lo bueno
-  ## Veredicto: approve | request_changes | needs_discussion
-
+  Eres un code reviewer experto con acceso al contexto completo de un PR.
+  Tu primera respuesta es siempre el review estructurado:
+    ## Resumen, ## Problemas, ## Lo bueno, ## Veredicto
+  En mensajes siguientes, responde las preguntas del usuario sobre el PR
+  manteniendo tu personalidad. Usa las tools si necesitas explorar mas contexto.
   {bloque_personalidad}
   ```
-- [ ] Persona `strict` — Senior con 15 anos, directo, cita SOLID/DRY solo si aplica, no tolera PR sin tests
-- [ ] Persona `mentor` — Senior amable, explica el "por que", valida lo bueno primero, sugiere recursos
-- [ ] Persona `troll` — Sarcastico pero tecnico, bromas sobre patrones malos, estilo senior de bar
-- [ ] Probar cada prompt en ChatGPT/playground con un diff real para verificar tono y formato
+- [ ] Persona `strict` — directo, sin rodeos, cita SOLID/DRY solo si aplica, no tolera PR sin tests, en el chat no suaviza las criticas
+- [ ] Persona `mentor` — explica el "por que", valida lo bueno primero, en el chat guia hacia la solucion paso a paso
+- [ ] Persona `troll` — sarcastico pero tecnico, en el chat sigue siendo ironico pero da respuestas utiles
+- [ ] Probar cada prompt manualmente con un diff + una pregunta de seguimiento para verificar que ambas fases funcionan
 - [ ] `getPersona(persona: Persona): string` — export para que Andrew lo use en la route
 
 ---
@@ -128,12 +128,14 @@ Response: Data stream (Vercel AI SDK format)
 > Ambos juntos.
 
 - [ ] Conectar route de Andrew con personas de Julidev
-- [ ] Probar `POST /api/review` con curl o Postman con un PR real
+- [ ] Probar flujo de 2 turnos con curl:
+  1. Primer turno con PR real → verifica que devuelve review estructurado
+  2. Segundo turno con pregunta de seguimiento → verifica que el contexto se mantiene
 - [ ] Verificar que las 3 personalidades generan reviews distintos
-- [ ] Verificar que las tools se ejecutan (el agente llama a `fetch_file_context`)
+- [ ] Verificar que las tools se ejecutan en algun turno
 - [ ] Fix rapido de cualquier bug de integracion
 
-**Hito:** A las 1:40 el backend DEBE funcionar completo. Curl devuelve stream con review.
+**Hito:** A las 1:40 el backend DEBE funcionar en 2 turnos. Curl devuelve review en turno 1 y respuesta contextualizada en turno 2.
 
 ---
 
@@ -144,39 +146,39 @@ Response: Data stream (Vercel AI SDK format)
 ### Julidev — UI con v0 + componentes (1:40–2:10)
 
 - [ ] Generar UI en v0.dev con prompt:
-  > "A single-page app for reviewing GitHub PRs with AI. Large URL input, 3 selectable personality cards (Strict Senior red, Friendly Mentor green, Code Troll purple), Review button, and a streaming markdown output area below. Dark theme, shadcn/ui."
+  > "A single-page GitHub PR reviewer with AI chat. Top section: URL input and 3 personality cards (Strict Senior, Friendly Mentor, Code Troll). After submitting, the top section collapses and a chat window appears: message bubbles showing AI review and conversation, a text input at the bottom to ask follow-up questions, a small badge when the AI is fetching files. Dark theme, shadcn/ui."
 - [ ] Adaptar output de v0 al proyecto
-- [ ] `components/review-form.tsx` — input + cards + boton
-- [ ] `components/review-stream.tsx` — render markdown con `react-markdown` + `remark-gfm`
-- [ ] `components/tool-indicator.tsx` — badge "Investigando {file}..."
-- [ ] Estilos para headings, code blocks, listas en el markdown
+- [ ] `components/review-form.tsx` — input + cards + boton (estado pre-submit)
+- [ ] `components/chat-window.tsx` — historial de mensajes + input de chat (estado post-submit)
+- [ ] `components/tool-indicator.tsx` — badge animado "Investigando {file}..."
+- [ ] Distinguir visualmente mensajes de usuario vs agente
 
 ### Andrew — Logica del frontend + conexion (1:40–2:10)
 
-- [ ] `app/page.tsx` — conectar con `useCompletion`:
+- [ ] `app/page.tsx` — conectar con `useChat`:
   ```tsx
-  const { completion, isLoading, complete } = useCompletion({
-    api: '/api/review',
+  const { messages, input, handleInputChange, handleSubmit, isLoading, append } = useChat({
+    api: '/api/chat',
+    body: { prUrl, persona }, // el backend los usa solo en el primer turno
   });
+
+  // Disparar el review inicial al submit del form:
+  append({ role: 'user', content: 'Haz el review completo de este PR.' });
   ```
-- [ ] State: `prUrl`, `persona`, pasar a `review-form`
-- [ ] Validacion basica del input (que parezca URL de GitHub)
-- [ ] Deshabilitar boton si no hay URL o persona
-- [ ] Auto-scroll mientras streamea
-- [ ] Manejar errores del backend:
-  - URL invalida → mensaje claro
-  - PR no encontrado → sugerir repo publico
-  - Rate limit → mostrar tiempo de reset
+- [ ] State: `prUrl`, `persona`, `hasStarted` (para alternar entre form y chat)
+- [ ] Validacion basica del input URL antes de submit
+- [ ] Auto-scroll al ultimo mensaje mientras streamea
+- [ ] Manejar errores del backend: URL invalida, PR no encontrado, rate limit
 
 ### Juntos (2:10–2:30) — Integrar y probar
 
-- [ ] Conectar componentes de Julidev con logica de Andrew
-- [ ] Probar flujo completo: URL → seleccionar persona → click → stream visible
+- [ ] Conectar componentes de Julidev con logica de Andrew en `page.tsx`
+- [ ] Probar flujo completo: URL → persona → submit → review en chat → pregunta de seguimiento → respuesta
 - [ ] Probar las 3 personalidades
 - [ ] Verificar que tool calls se muestran en la UI
 - [ ] Fix de bugs visuales o de conexion
 
-**Hito:** A las 2:30 la app DEBE funcionar end-to-end en localhost.
+**Hito:** A las 2:30 el flujo completo (review + chat de seguimiento) DEBE funcionar en localhost.
 
 ---
 
@@ -188,8 +190,8 @@ Response: Data stream (Vercel AI SDK format)
 |-------|-------|
 | Deploy en Vercel, probar en produccion | Andrew |
 | Responsive + estados (loading, error, vacio) | Julidev |
-| Favicon + titulo pagina | Julidev |
-| Probar con 2-3 PRs reales en produccion | Andrew |
+| Favicon + titulo de pagina | Julidev |
+| Probar con 2-3 PRs reales + chat de seguimiento en prod | Andrew |
 | README basico | Quien termine primero |
 
 **2:50 — Freeze de codigo. Solo fixes criticos. Grabar demo.**
@@ -202,10 +204,10 @@ Response: Data stream (Vercel AI SDK format)
 |---------|----------|
 | 0:00–0:10 | **Juntos:** Setup, acordar contrato, push inicial |
 | 0:10–1:20 | **Separados:** Andrew (github+tools+route), Julidev (tipos+personas) |
-| 1:20–1:40 | **Juntos:** Integrar backend, probar con curl |
+| 1:20–1:40 | **Juntos:** Integrar backend, probar 2 turnos con curl |
 | 1:40–2:30 | **Juntos:** Frontend (Julidev UI, Andrew logica, luego integran) |
 | 2:30–3:00 | **Juntos:** Deploy, pulido, demo |
 
 ## Regla de oro
 
-> Si a las 2:00h no funciona el flujo completo, **dejar todo y hacer que funcione.** Features extra no valen nada si el demo no corre.
+> Si a las 2:00h no funciona el review inicial end-to-end, dejar el chat para despues y enfocarse en que el primer turno funcione. El chat es el mismo mecanismo — si el review funciona, el chat es cuestion de no resetear el historial.
