@@ -211,3 +211,4 @@ Response: Data stream (Vercel AI SDK useChat format)
 ## Regla de oro
 
 > Si a las 2:00h no funciona el review inicial end-to-end, dejar el chat para despues y enfocarse en que el primer turno funcione. El chat es el mismo mecanismo — si el review funciona, el chat es cuestion de no resetear el historial.
+> 
