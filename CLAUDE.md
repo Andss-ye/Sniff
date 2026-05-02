@@ -32,6 +32,7 @@ app/api/review/route.ts       # POST endpoint — validates input, fetches PR da
 lib/github.ts                 # GitHub REST helpers: parseUrl, fetchPR, fetchDiff, fetchFileContent
 lib/personas.ts               # 3 system prompts (strict, mentor, troll)
 lib/tools.ts                  # 2 AI SDK tools: fetch_file_context, list_directory
+lib/types.ts                  # Interfaces extraidas de github.ts: PRData, FileDiff, Persona, ReviewRequest
 components/review-form.tsx    # URL input + personality selector
 components/review-stream.tsx  # Markdown renderer for streamed output
 components/tool-indicator.tsx # Shows when agent is using a tool

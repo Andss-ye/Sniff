@@ -54,14 +54,17 @@ app/
 ├── lib/
 │   ├── github.ts               # parseUrl(), fetchPR(), fetchDiff(), fetchFileContent()
 │   ├── personas.ts             # 3 system prompts
-│   └── tools.ts                # 1-2 tools del agente
+│   ├── tools.ts                # 1-2 tools del agente
+│   └── types.ts                # Interfaces extraidas de github.ts una vez que existe (PRData, FileDiff, Persona, ReviewRequest)
 └── components/
     ├── review-form.tsx         # Input URL + selector personalidad
     ├── review-stream.tsx       # Renderiza markdown en streaming
     └── tool-indicator.tsx      # Muestra cuando el agente usa una tool
 ```
 
-**Solo 7 archivos de codigo.** Sin cache, sin base de datos, sin auth. Puro frontend + 1 API route + AI.
+**Solo 8 archivos de codigo.** Sin cache, sin base de datos, sin auth. Puro frontend + 1 API route + AI.
+
+> `lib/types.ts` no es un punto de partida — se extrae de `lib/github.ts` una vez que las funciones ya existen y sus tipos naturales estan claros. No definir tipos en el vacio antes de tener la implementacion.
 
 ---
 
