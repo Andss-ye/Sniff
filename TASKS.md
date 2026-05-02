@@ -22,10 +22,10 @@
 
 > Ambos juntos.
 
-- [ ] Andrew: `create-next-app` con TypeScript + Tailwind + App Router
-- [ ] Andrew: `npm install ai @ai-sdk/openai zod react-markdown remark-gfm`
-- [ ] Andrew: push inicial a GitHub + deploy vacio en Vercel
-- [ ] Andrew: configurar Vercel AI Gateway en dashboard (o `OPENAI_API_KEY` en `.env.local`)
+- [x] Andrew: `create-next-app` con TypeScript + Tailwind + App Router
+- [x] Andrew: `npm install ai @ai-sdk/openai zod react-markdown remark-gfm`
+- [x] Andrew: push inicial a GitHub + deploy vacio en Vercel
+- [x] Andrew: configurar Vercel AI Gateway en dashboard (o `OPENAI_API_KEY` en `.env.local`)
 - [ ] Julidev: clonar repo, verificar que corre en local
 - [ ] Julidev: `npx shadcn@latest init` + `npx shadcn@latest add button card input badge`
 - [ ] Julidev: push del setup de shadcn
