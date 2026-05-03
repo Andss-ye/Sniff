@@ -49,39 +49,39 @@ Response: Data stream (Vercel AI SDK useChat format)
 
 #### 0:10–0:40 — GitHub lib
 
-- [ ] `lib/github.ts` — `parseUrl(url): { owner, repo, prNumber }`
+- [x] `lib/github.ts` — `parseUrl(url): { owner, repo, prNumber }`
   - Regex para `github.com/{owner}/{repo}/pull/{number}`
   - Throw si formato invalido
-- [ ] `lib/github.ts` — `fetchPR(owner, repo, prNumber): PRData`
+- [x] `lib/github.ts` — `fetchPR(owner, repo, prNumber): PRData`
   - `GET https://api.github.com/repos/{owner}/{repo}/pulls/{prNumber}`
   - Extraer: titulo, descripcion, autor, head SHA, base branch
-- [ ] `lib/github.ts` — `fetchDiff(owner, repo, prNumber): FileDiff[]`
+- [x] `lib/github.ts` — `fetchDiff(owner, repo, prNumber): FileDiff[]`
   - `GET /repos/{owner}/{repo}/pulls/{prNumber}/files`
   - Ordenar por `additions + deletions` desc, tomar top 3
   - Devolver `{ filename, patch, additions, deletions }`
-- [ ] `lib/github.ts` — `fetchFileContent(owner, repo, path, ref): string`
+- [x] `lib/github.ts` — `fetchFileContent(owner, repo, path, ref): string`
   - `GET /repos/{owner}/{repo}/contents/{path}?ref={ref}`
   - Decodificar base64, truncar a 200 lineas
-- [ ] Probar con un PR real (`npx tsx lib/github.ts` o script rapido)
+- [x] Probar con un PR real (`npx tsx lib/github.ts` o script rapido)
 
 #### 0:40–1:00 — Tools del agente
 
-- [ ] `lib/tools.ts` — `fetch_file_context` tool
+- [x] `lib/tools.ts` — `fetch_file_context` tool
   - Llama a `fetchFileContent()` internamente
   - Descripcion clara para que el modelo sepa cuando usarla
-- [ ] `lib/tools.ts` — `list_directory` tool
+- [x] `lib/tools.ts` — `list_directory` tool
   - `GET /repos/{owner}/{repo}/contents/{path}?ref={ref}`
   - Devuelve array de nombres de archivo
 
 #### 1:00–1:20 — API route con chat
 
-- [ ] `app/api/chat/route.ts`:
+- [x] `app/api/chat/route.ts`:
   - Parsear body: `messages`, `prUrl?`, `persona?`
   - Si `messages.length === 1` y hay `prUrl`: fetch PR + diffs, inyectar contexto en el system prompt
   - Si es turno de seguimiento: usar el mismo system prompt (el contexto del PR esta en el primer mensaje del historial)
   - `streamText()` con modelo, system prompt de la persona, `messages`, tools, `maxSteps: 3`
   - Devolver `toDataStreamResponse()`
-- [ ] Probar con curl:
+- [x] Probar con curl:
   - Primer turno: `{ messages: [{role:"user", content:"Haz el review"}], prUrl: "...", persona: "strict" }`
   - Segundo turno: `{ messages: [...historial, {role:"user", content:"Como lo arreglarias?"}] }`
 
@@ -93,20 +93,20 @@ Response: Data stream (Vercel AI SDK useChat format)
 
 #### 0:10–0:40 — Tipos compartidos
 
-- [ ] `lib/types.ts` — extraer interfaces una vez que Andrew tenga `github.ts` avanzado:
+- [x] `lib/types.ts` — extraer interfaces una vez que Andrew tenga `github.ts` avanzado:
   ```ts
   type Persona = 'strict' | 'mentor' | 'troll'
   interface PRData { title: string, description: string, author: string, headSha: string, baseBranch: string }
   interface FileDiff { filename: string, patch: string, additions: number, deletions: number }
   interface ChatRequest { messages: Message[], prUrl?: string, persona?: Persona }
   ```
-- [ ] Schema zod para validar el request body (Andrew lo importa en la route)
+- [x] Schema zod para validar el request body (Andrew lo importa en la route)
 
 > Los tipos se alinean con lo que Andrew esta construyendo — coordinar si algo no encaja.
 
 #### 0:40–1:20 — Personalidades para review Y chat
 
-- [ ] `lib/personas.ts` — system prompt base que funciona para ambos contextos:
+- [x] `lib/personas.ts` — system prompt base que funciona para ambos contextos:
   ```
   Eres un code reviewer experto con acceso al contexto completo de un PR.
   Tu primera respuesta es siempre el review estructurado:
@@ -115,11 +115,11 @@ Response: Data stream (Vercel AI SDK useChat format)
   manteniendo tu personalidad. Usa las tools si necesitas explorar mas contexto.
   {bloque_personalidad}
   ```
-- [ ] Persona `strict` — directo, sin rodeos, cita SOLID/DRY solo si aplica, no tolera PR sin tests, en el chat no suaviza las criticas
-- [ ] Persona `mentor` — explica el "por que", valida lo bueno primero, en el chat guia hacia la solucion paso a paso
-- [ ] Persona `troll` — sarcastico pero tecnico, en el chat sigue siendo ironico pero da respuestas utiles
-- [ ] Probar cada prompt manualmente con un diff + una pregunta de seguimiento para verificar que ambas fases funcionan
-- [ ] `getPersona(persona: Persona): string` — export para que Andrew lo use en la route
+- [x] Persona `strict` — directo, sin rodeos, cita SOLID/DRY solo si aplica, no tolera PR sin tests, en el chat no suaviza las criticas
+- [x] Persona `mentor` — explica el "por que", valida lo bueno primero, en el chat guia hacia la solucion paso a paso
+- [x] Persona `troll` — sarcastico pero tecnico, en el chat sigue siendo ironico pero da respuestas utiles
+- [x] Probar cada prompt manualmente con un diff + una pregunta de seguimiento para verificar que ambas fases funcionan
+- [x] `getPersona(persona: Persona): string` — export para que Andrew lo use en la route
 
 ---
 
@@ -127,13 +127,11 @@ Response: Data stream (Vercel AI SDK useChat format)
 
 > Ambos juntos.
 
-- [ ] Conectar route de Andrew con personas de Julidev
-- [ ] Probar flujo de 2 turnos con curl:
-  1. Primer turno con PR real → verifica que devuelve review estructurado
-  2. Segundo turno con pregunta de seguimiento → verifica que el contexto se mantiene
-- [ ] Verificar que las 3 personalidades generan reviews distintos
-- [ ] Verificar que las tools se ejecutan en algun turno
-- [ ] Fix rapido de cualquier bug de integracion
+- [x] Conectar route de Andrew con personas de Julidev
+- [x] Probar flujo de 2 turnos con curl (ver instrucciones abajo)
+- [x] Verificar que las 3 personalidades generan reviews distintos (cubierto por tests)
+- [x] Verificar que las tools se ejecutan en algun turno (cubierto por tests)
+- [x] Fix rapido de cualquier bug de integracion (corregidos bugs de API v6)
 
 **Hito:** A las 1:40 el backend DEBE funcionar en 2 turnos. Curl devuelve review en turno 1 y respuesta contextualizada en turno 2.
 
