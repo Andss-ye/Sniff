@@ -1,0 +1,669 @@
+/* ════════════════════════════════════════════════════
+   SNIFF REVIEW PAGE — inherits landing design tokens
+   ════════════════════════════════════════════════════ */
+
+.review-page {
+  --font-display: "Instrument Serif", Georgia, serif;
+  --font-body: "Inter", system-ui, sans-serif;
+
+  --clr-bg: #fdf6f0;
+  --clr-black: #1a0a00;
+  --clr-gray: #7a5c52;
+  --clr-white: #ffffff;
+  --clr-pink: oklch(68% 0.22 355);
+  --clr-red: oklch(60% 0.22 25);
+  --clr-yellow: oklch(78% 0.18 80);
+  --clr-green: oklch(68% 0.18 155);
+  --grad-accent: linear-gradient(
+    135deg,
+    var(--clr-pink) 0%,
+    var(--clr-red) 35%,
+    var(--clr-yellow) 70%,
+    var(--clr-green) 100%
+  );
+
+  min-height: 100vh;
+  background: var(--clr-bg);
+  color: var(--clr-black);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Animations (mirrors landing.css) ── */
+
+@keyframes fade-rise {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.review-page .animate-fade-rise          { opacity: 0; animation: fade-rise 0.8s ease-out 0s     forwards; }
+.review-page .animate-fade-rise-delay    { opacity: 0; animation: fade-rise 0.8s ease-out 0.2s   forwards; }
+.review-page .animate-fade-rise-delay-2  { opacity: 0; animation: fade-rise 0.8s ease-out 0.4s   forwards; }
+
+/* ── Shared badge (mirrors landing.css) ── */
+
+.review-page .section-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--clr-black);
+  border: 1.5px solid oklch(68% 0.22 355 / 0.3);
+  border-radius: 9999px;
+  padding: 0.35rem 1rem;
+  margin-bottom: 2.5rem;
+}
+
+.review-page .badge-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--grad-accent);
+  flex-shrink: 0;
+}
+
+/* ── Nav (mirrors landing.css) ── */
+
+.review-page nav {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+}
+
+.review-page .nav-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: 1.5rem 2rem;
+}
+
+.review-page .logo {
+  font-family: var(--font-display);
+  font-size: 1.875rem;
+  letter-spacing: -0.025em;
+  text-decoration: none;
+  line-height: 1;
+  background: var(--grad-accent);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.review-page .nav-links {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  list-style: none;
+}
+
+.review-page .nav-links a {
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  text-decoration: none;
+  color: var(--clr-gray);
+  transition: color 0.2s ease;
+}
+
+.review-page .nav-links a:hover { color: var(--clr-black); }
+
+.review-page .btn-nav {
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 500;
+  background: var(--grad-accent);
+  color: var(--clr-white);
+  border: none;
+  border-radius: 9999px;
+  padding: 0.625rem 1.5rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.review-page .btn-nav:hover {
+  transform: scale(1.03);
+  box-shadow: 0 4px 24px oklch(68% 0.22 355 / 0.35);
+}
+
+/* ── Hero rule (mirrors landing.css) ── */
+
+.review-page .hero-rule {
+  display: flex;
+  gap: 6px;
+  margin-top: 3.5rem;
+}
+
+.review-page .hero-rule span {
+  display: block;
+  width: 32px;
+  height: 2px;
+  border-radius: 999px;
+}
+
+.review-page .hero-rule .r1 { background: var(--clr-pink); }
+.review-page .hero-rule .r2 { background: var(--clr-red); }
+.review-page .hero-rule .r3 { background: var(--clr-yellow); }
+.review-page .hero-rule .r4 { background: var(--clr-green); }
+
+/* ════════════════════════════════════════════════════
+   Review Scene (form state)
+   ════════════════════════════════════════════════════ */
+
+.review-page .review-scene {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Review Form ── */
+
+.review-page .review-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 4rem 1.5rem 6rem;
+  flex: 1;
+}
+
+.review-page .review-badge {
+  margin-bottom: 2rem;
+}
+
+.review-page .review-headline {
+  font-family: var(--font-display);
+  font-size: clamp(2.8rem, 7vw, 5.5rem);
+  font-weight: 400;
+  line-height: 1.0;
+  letter-spacing: -0.04em;
+  max-width: 56rem;
+  color: var(--clr-black);
+  margin-bottom: 1.5rem;
+}
+
+.review-page .accent-italic {
+  font-style: italic;
+  background: var(--grad-accent);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.review-page .review-sub {
+  font-size: 17px;
+  line-height: 1.7;
+  max-width: 36rem;
+  color: rgb(57, 57, 52);
+  margin-bottom: 3rem;
+}
+
+/* URL Input */
+
+.review-page .review-url-wrap {
+  width: 100%;
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 2.5rem;
+  text-align: left;
+}
+
+.review-page .review-label {
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--clr-gray);
+}
+
+.review-page .review-input {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  color: var(--clr-black);
+  background: var(--clr-white);
+  border: 1.5px solid oklch(68% 0.22 355 / 0.22);
+  border-radius: 12px;
+  padding: 0.9rem 1.25rem;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.review-page .review-input:focus {
+  border-color: var(--clr-pink);
+  box-shadow: 0 0 0 3px oklch(68% 0.22 355 / 0.12);
+}
+
+.review-page .review-input-error {
+  border-color: var(--clr-red) !important;
+}
+
+.review-page .review-error {
+  font-size: 0.8rem;
+  color: var(--clr-red);
+  margin-top: 0.25rem;
+}
+
+/* Persona Selector */
+
+.review-page .review-persona-wrap {
+  width: 100%;
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 2.5rem;
+  text-align: left;
+}
+
+.review-page .persona-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.review-page .persona-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.9rem 1rem;
+  background: var(--clr-white);
+  border: 1.5px solid oklch(68% 0.22 355 / 0.18);
+  border-radius: 14px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+.review-page .persona-card:hover {
+  transform: translateY(-2px);
+  border-color: oklch(68% 0.22 355 / 0.4);
+}
+
+.review-page .persona-active {
+  box-shadow: 0 0 0 2px var(--clr-pink);
+}
+
+.review-page .persona-pink.persona-active  { box-shadow: 0 0 0 2px var(--clr-pink); }
+.review-page .persona-yellow.persona-active { box-shadow: 0 0 0 2px var(--clr-yellow); }
+.review-page .persona-green.persona-active  { box-shadow: 0 0 0 2px var(--clr-green); }
+
+.review-page .persona-name {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--clr-black);
+  line-height: 1.2;
+}
+
+.review-page .persona-desc {
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  color: var(--clr-gray);
+  line-height: 1.4;
+}
+
+/* Submit button */
+
+.review-page .btn-review {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 500;
+  background: var(--grad-accent);
+  color: var(--clr-white);
+  border: none;
+  border-radius: 9999px;
+  padding: 1.1rem 3.5rem;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.review-page .btn-review:hover {
+  transform: scale(1.03);
+  box-shadow: 0 8px 32px oklch(68% 0.22 355 / 0.4);
+}
+
+/* ════════════════════════════════════════════════════
+   Chat Layout
+   ════════════════════════════════════════════════════ */
+
+.review-page .chat-layout {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Sidebar */
+
+.review-page .chat-sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 2rem 1.5rem;
+  border-right: 1px solid oklch(68% 0.22 355 / 0.12);
+  background: var(--clr-bg);
+  overflow-y: auto;
+}
+
+.review-page .sidebar-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.review-page .sidebar-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--clr-gray);
+}
+
+.review-page .sidebar-pr-link {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--clr-black);
+  text-decoration: none;
+  word-break: break-all;
+  line-height: 1.4;
+  transition: color 0.15s ease;
+}
+
+.review-page .sidebar-pr-link:hover {
+  color: var(--clr-pink);
+}
+
+.review-page .sidebar-persona {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  color: var(--clr-black);
+}
+
+.review-page .btn-new-review {
+  margin-top: auto;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--clr-gray);
+  background: transparent;
+  border: 1.5px solid oklch(68% 0.22 355 / 0.2);
+  border-radius: 9999px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease;
+  text-align: left;
+}
+
+.review-page .btn-new-review:hover {
+  color: var(--clr-black);
+  border-color: oklch(68% 0.22 355 / 0.45);
+}
+
+/* Main chat */
+
+.review-page .chat-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--clr-bg);
+}
+
+.review-page .chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  /* centers a ~760px column; falls back to 1.5rem on narrow viewports */
+  padding: 2.5rem max(1.5rem, calc(50% - 390px));
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.review-page .chat-msg {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.review-page .chat-msg-inner {
+  width: 100%; /* column width comes from .chat-messages padding */
+  background: var(--clr-white);
+  border: 1px solid oklch(68% 0.22 355 / 0.14);
+  border-radius: 16px;
+  padding: 1.75rem 2rem;
+  box-shadow: 0 2px 16px oklch(10% 0.04 355 / 0.06);
+}
+
+/* User message bubble */
+
+.review-page .chat-msg--user {
+  justify-content: flex-end;
+}
+
+.review-page .chat-bubble-user {
+  max-width: 72%;
+  background: oklch(52% 0.22 355);
+  color: #fff;
+  border-radius: 18px 18px 4px 18px;
+  padding: 0.8rem 1.2rem;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.55;
+  word-break: break-word;
+}
+
+/* Markdown styles inside chat */
+
+.review-page .chat-markdown {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--clr-black);
+}
+
+.review-page .chat-markdown h1,
+.review-page .chat-markdown h2,
+.review-page .chat-markdown h3 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  color: var(--clr-black);
+  margin: 1.5rem 0 0.5rem;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.review-page .chat-markdown h1 { font-size: 1.8rem; }
+.review-page .chat-markdown h2 { font-size: 1.45rem; }
+.review-page .chat-markdown h3 { font-size: 1.15rem; }
+
+.review-page .chat-markdown p { margin: 0.65rem 0; }
+
+.review-page .chat-markdown strong { font-weight: 700; color: var(--clr-black); }
+
+.review-page .chat-markdown code {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.82rem;
+  background: oklch(68% 0.22 355 / 0.08);
+  color: var(--clr-red);
+  border-radius: 5px;
+  padding: 0.15rem 0.4rem;
+}
+
+.review-page .chat-markdown pre {
+  background: oklch(14% 0.03 355 / 0.96);
+  border-radius: 10px;
+  padding: 1.1rem 1.25rem;
+  overflow-x: auto;
+  margin: 0.75rem 0;
+}
+
+.review-page .chat-markdown pre code {
+  background: transparent;
+  color: oklch(90% 0.04 355);
+  padding: 0;
+  font-size: 0.82rem;
+}
+
+.review-page .chat-markdown ul,
+.review-page .chat-markdown ol {
+  padding-left: 1.4rem;
+  margin: 0.5rem 0;
+}
+
+.review-page .chat-markdown li { margin: 0.25rem 0; }
+
+.review-page .chat-markdown hr {
+  border: none;
+  border-top: 1px solid oklch(68% 0.22 355 / 0.14);
+  margin: 1.25rem 0;
+}
+
+/* Thinking dots */
+
+.review-page .chat-thinking {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.review-page .thinking-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--clr-pink);
+  animation: thinking-pulse 1.2s ease-in-out infinite;
+}
+
+.review-page .thinking-dot:nth-child(2) { animation-delay: 0.2s; background: var(--clr-yellow); }
+.review-page .thinking-dot:nth-child(3) { animation-delay: 0.4s; background: var(--clr-green); }
+
+@keyframes thinking-pulse {
+  0%, 80%, 100% { opacity: 0.25; transform: scale(0.85); }
+  40%            { opacity: 1;    transform: scale(1); }
+}
+
+/* Tool indicator */
+
+.review-page .tool-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  color: var(--clr-gray);
+  border: 1.5px solid oklch(68% 0.22 355 / 0.25);
+  border-radius: 9999px;
+  padding: 0.3rem 0.85rem;
+}
+
+.review-page .tool-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--grad-accent);
+  flex-shrink: 0;
+  animation: thinking-pulse 1.2s ease-in-out infinite;
+}
+
+/* Chat input bar */
+
+.review-page .chat-input-bar {
+  display: flex;
+  gap: 0.75rem;
+  /* same column centering as .chat-messages */
+  padding: 1.25rem max(1.5rem, calc(50% - 390px));
+  border-top: 1px solid oklch(68% 0.22 355 / 0.1);
+  background: var(--clr-bg);
+}
+
+.review-page .chat-input {
+  flex: 1;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--clr-black);
+  background: var(--clr-white);
+  border: 1.5px solid oklch(68% 0.22 355 / 0.2);
+  border-radius: 9999px;
+  padding: 0.75rem 1.25rem;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.review-page .chat-input:focus {
+  border-color: var(--clr-pink);
+  box-shadow: 0 0 0 3px oklch(68% 0.22 355 / 0.1);
+}
+
+.review-page .chat-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.review-page .btn-send {
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 500;
+  background: var(--grad-accent);
+  color: var(--clr-white);
+  border: none;
+  border-radius: 9999px;
+  padding: 0.75rem 1.75rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.review-page .btn-send:hover:not(:disabled) {
+  transform: scale(1.03);
+  box-shadow: 0 4px 20px oklch(68% 0.22 355 / 0.35);
+}
+
+.review-page .btn-send:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ════════════════════════════════════════════════════
+   Responsive
+   ════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .review-page .nav-links { display: none; }
+
+  .review-page .persona-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .review-page .chat-sidebar {
+    display: none;
+  }
+
+  .review-page .chat-messages {
+    padding: 1.5rem 1.25rem;
+  }
+
+  .review-page .chat-input-bar {
+    padding: 1rem 1.25rem;
+  }
+}

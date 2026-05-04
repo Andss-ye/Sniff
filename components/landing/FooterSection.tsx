@@ -48,7 +48,7 @@ export default function FooterSection() {
           </span>
         </div>
 
-        <a href="#" className="footer-cta">Start reviewing PRs</a>
+        <a href="/review" className="footer-cta">Start reviewing PRs</a>
 
         <svg
           className="footer-wave"

@@ -17,7 +17,7 @@ export default function HeroSection() {
             <li><a href="#">Docs</a></li>
           </ul>
 
-          <button className="btn-nav">Trial</button>
+          <a href="/review" className="btn-nav">Trial</a>
         </div>
       </nav>
 
@@ -34,7 +34,7 @@ export default function HeroSection() {
           comments in seconds.
         </p>
 
-        <button className="btn-hero animate-fade-rise-delay-2">Trial</button>
+        <a href="/review" className="btn-hero animate-fade-rise-delay-2">Try it free →</a>
 
         <div className="hero-rule animate-fade-rise-delay-2">
           <span className="r1" />
