@@ -380,7 +380,7 @@
 
 .review-page .sidebar-pr-link {
   font-family: var(--font-body);
-  font-size: 0.83rem;
+  font-size: 0.9rem;
   font-weight: 600;
   color: var(--clr-black);
   text-decoration: none;
@@ -395,7 +395,7 @@
 
 .review-page .sidebar-persona {
   font-family: var(--font-display);
-  font-size: 0.95rem;
+  font-size: 1.05rem;
   color: var(--clr-black);
 }
 
@@ -432,10 +432,11 @@
 .review-page .chat-messages {
   flex: 1;
   overflow-y: auto;
-  padding: 2rem 2.5rem;
+  /* centers a ~760px column; falls back to 1.5rem on narrow viewports */
+  padding: 2.5rem max(1.5rem, calc(50% - 390px));
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 2rem;
 }
 
 .review-page .chat-msg {
@@ -444,21 +445,38 @@
 }
 
 .review-page .chat-msg-inner {
-  max-width: 720px;
-  width: 100%;
+  width: 100%; /* column width comes from .chat-messages padding */
   background: var(--clr-white);
   border: 1px solid oklch(68% 0.22 355 / 0.14);
-  border-radius: 18px;
-  padding: 1.5rem 1.75rem;
-  box-shadow: 0 2px 12px oklch(10% 0.04 355 / 0.05);
+  border-radius: 16px;
+  padding: 1.75rem 2rem;
+  box-shadow: 0 2px 16px oklch(10% 0.04 355 / 0.06);
+}
+
+/* User message bubble */
+
+.review-page .chat-msg--user {
+  justify-content: flex-end;
+}
+
+.review-page .chat-bubble-user {
+  max-width: 72%;
+  background: oklch(52% 0.22 355);
+  color: #fff;
+  border-radius: 18px 18px 4px 18px;
+  padding: 0.8rem 1.2rem;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.55;
+  word-break: break-word;
 }
 
 /* Markdown styles inside chat */
 
 .review-page .chat-markdown {
   font-family: var(--font-body);
-  font-size: 0.9rem;
-  line-height: 1.75;
+  font-size: 1rem;
+  line-height: 1.7;
   color: var(--clr-black);
 }
 
@@ -468,17 +486,18 @@
   font-family: var(--font-display);
   font-weight: 400;
   color: var(--clr-black);
-  margin: 1.25rem 0 0.5rem;
-  line-height: 1.2;
-  letter-spacing: -0.015em;
+  margin: 1.5rem 0 0.5rem;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
 }
 
-.review-page .chat-markdown h2 { font-size: 1.3rem; }
-.review-page .chat-markdown h3 { font-size: 1.1rem; }
+.review-page .chat-markdown h1 { font-size: 1.8rem; }
+.review-page .chat-markdown h2 { font-size: 1.45rem; }
+.review-page .chat-markdown h3 { font-size: 1.15rem; }
 
-.review-page .chat-markdown p { margin: 0.6rem 0; }
+.review-page .chat-markdown p { margin: 0.65rem 0; }
 
-.review-page .chat-markdown strong { font-weight: 600; color: var(--clr-black); }
+.review-page .chat-markdown strong { font-weight: 700; color: var(--clr-black); }
 
 .review-page .chat-markdown code {
   font-family: var(--font-mono, monospace);
@@ -572,7 +591,8 @@
 .review-page .chat-input-bar {
   display: flex;
   gap: 0.75rem;
-  padding: 1.25rem 2.5rem;
+  /* same column centering as .chat-messages */
+  padding: 1.25rem max(1.5rem, calc(50% - 390px));
   border-top: 1px solid oklch(68% 0.22 355 / 0.1);
   background: var(--clr-bg);
 }

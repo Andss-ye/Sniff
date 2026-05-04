@@ -95,7 +95,15 @@ export default function ChatWindow({ prUrl, persona, onReset }: ChatWindowProps)
       <div className="chat-main">
         <div className="chat-messages">
           {messages.map((msg) => {
-            if (msg.role === 'user') return null
+            if (msg.role === 'user') {
+              const text = msg.parts.filter(isTextUIPart).map(p => p.text).join('')
+              if (!text || text === 'Review this PR') return null
+              return (
+                <div key={msg.id} className="chat-msg chat-msg--user">
+                  <div className="chat-bubble-user">{text}</div>
+                </div>
+              )
+            }
 
             return (
               <div key={msg.id} className="chat-msg">
