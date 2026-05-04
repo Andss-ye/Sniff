@@ -36,7 +36,7 @@ curl -X POST http://localhost:3000/api/chat \
     "messages": [
       {
         "role": "user",
-        "content": "Revisa este PR"
+       "parts": [{ "type": "text", "text": "Revisa este PR" }]
       }
     ],
     "prUrl": "https://github.com/facebook/react/pull/29999",

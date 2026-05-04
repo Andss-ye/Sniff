@@ -147,6 +147,9 @@
   cursor: pointer;
   white-space: nowrap;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
 }
 
 .landing .btn-nav:hover {
@@ -259,6 +262,9 @@
   margin-top: 3rem;
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
 }
 
 .landing .btn-hero:hover {
@@ -670,6 +676,9 @@
   padding: 1rem 3rem;
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
 }
 
 .landing .btn-features:hover {

@@ -137,7 +137,7 @@ export default function FeaturesSection() {
         ))}
       </div>
 
-      <button className="btn-features">Get Started</button>
+      <a href="/review" className="btn-features">Get Started →</a>
     </section>
   );
 }

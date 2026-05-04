@@ -14,6 +14,7 @@
   "dependencies": {
     "@ai-sdk/groq": "^3.0.38",
     "@ai-sdk/openai": "^3.0.58",
+    "@ai-sdk/react": "^3.0.176",
     "@base-ui/react": "^1.4.1",
     "ai": "^6.0.174",
     "class-variance-authority": "^0.7.1",
