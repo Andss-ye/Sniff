@@ -1,36 +1,74 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Sniff
 
-## Getting Started
+PR review as a working session, not a report. Paste a public GitHub PR URL, pick a reviewer personality, get a streaming code review — then keep working with the same agent: ask for the fixed code, explore how a change affects other files, understand a teammate's PR before approving it.
 
-First, run the development server:
+## Stack
+
+- **Next.js 15** (App Router, TypeScript)
+- **Vercel AI SDK** + **Groq** (`llama-3` or compatible model)
+- **GitHub REST API** — unauthenticated, public repos only (60 req/h)
+- Deploy on Vercel (Node.js runtime)
+
+---
+
+## Setup
+
+### 1. Clone and install
+
+```bash
+git clone https://github.com/your-username/sniff.git
+cd sniff
+npm install
+```
+
+### 2. Set environment variables
+
+Create a `.env.local` file in the project root:
+
+```env
+# Required — get yours at https://console.groq.com
+GROQ_API_KEY=gsk_...
+
+# Optional — raises GitHub API rate limit from 60 to 5000 req/h
+# Get one at https://github.com/settings/tokens (no scopes needed for public repos)
+GITHUB_TOKEN=ghp_...
+```
+
+### 3. Run
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Usage
 
-## Learn More
+1. Paste a **public** GitHub PR URL, e.g. `https://github.com/vercel/next.js/pull/12345`
+2. Pick a reviewer personality:
+   - **Strict Senior** — direct, zero tolerance, no sugarcoating
+   - **Friendly Mentor** — pedagogical, explains the why, guides you to the answer
+   - **Code Troll** — sarcastic but technically brilliant, humor about the code not the author
+3. Hit **Review** — the agent streams a structured review (summary, issues by severity, verdict)
+4. Keep chatting: ask for the corrected code, explore side effects, clarify anything
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Commands
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm run dev      # Dev server at localhost:3000
+npm run build    # Production build
+npm run lint     # ESLint
+```
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Constraints
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Public GitHub repos only (no auth, no private repo support)
+- GitHub API: 60 req/h unauthenticated, 5000 req/h with `GITHUB_TOKEN`
+- Reviews are stateless — no database, no history between sessions
+- Diff is truncated to the top 3 changed files to stay within context window
