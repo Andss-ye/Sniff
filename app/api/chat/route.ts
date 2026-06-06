@@ -6,16 +6,37 @@ import { chatRequestSchema } from '@/lib/types'
 import { getPersona } from '@/lib/personas'
 import { parseUrl, fetchPR, fetchDiff } from '@/lib/github'
 import { createTools } from '@/lib/tools'
+import { checkRateLimit } from '@/lib/ratelimit'
 
 export const maxDuration = 30
 
 export async function POST(req: Request) {
+  const ip =
+    req.headers.get('x-forwarded-for')?.split(',')[0].trim() ??
+    req.headers.get('x-real-ip') ??
+    'unknown'
+
+  const { allowed, retryAfterMs } = checkRateLimit(ip)
+  if (!allowed) {
+    return Response.json(
+      { error: 'Demasiadas solicitudes. Intenta de nuevo en un momento.' },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(Math.ceil(retryAfterMs / 1000)),
+          'X-RateLimit-Limit': '10',
+          'X-RateLimit-Window': '60s',
+        },
+      }
+    )
+  }
+
   const body = await req.json()
   const validation = chatRequestSchema.safeParse(body)
 
   if (!validation.success) {
     return Response.json(
-      { error: 'Request inválido', details: validation.error.issues },
+      { error: 'Request inválido' },
       { status: 400 }
     )
   }
